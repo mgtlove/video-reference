@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en" data-look="lightboard">
+<head>
+<meta charset="utf-8">
+<title>Look previews: the same scene in seven looks</title>
+<!--
+  One scene, our own content, rendered in each look from styles/looks.json so the
+  looks can be judged side by side without anyone's frames. Nothing here is copied
+  from a creator; the tokens are ours, drafted after the style notes.
+
+  Exposes window.__study (STUDY-TEMPLATE.md). The "tones" are the look names, so:
+
+    npm run stills:local -- styles/preview --tone clippings 1 4 7.5
+    npm run check:local  -- styles/preview
+    npm run craft:local  -- styles/preview --tone doodle
+
+  Seeking uses document.getAnimations() exactly as studies/web-animations-seek does.
+-->
+<style>
+  :root {
+    --ground: #0b0b0d; --ink: #f2f2f2; --paper: #16161a; --a1: #b892ff; --a2: #6fe3ff; --a3: #ff7ad9;
+    --font: "Segoe UI", "Helvetica Neue", Arial, sans-serif; --weight: 500; --case: none;
+    --title: 88px; --label: 64px; --body: 54px;
+    --stroke: 6px; --glow: 0 0 6px; --cap: round;
+    --ms: 1100ms; --ease: ease-out; --rise: 0px; --from: 1;
+    --card-radius: 10px; --card-rot: 0deg; --card-shadow: none; --card-border: 2px solid var(--ink);
+    --drift-scale: 1.0; --drift-y: 0px;
+  }
+  [data-look="code-report"] { --ground:#0d0d0d; --ink:#f4f4f4; --paper:#161616; --a1:#ff3b3b; --a2:#37e07a; --a3:#ffb020; --weight:700; --case:uppercase; --title:78px; --stroke:8px; --glow:none; --cap:square; --ms:220ms; --from:0.92; --card-rot:-2deg; --card-shadow:0 24px 40px rgba(0,0,0,.6); --card-border:none; --card-radius:6px; }
+  [data-look="studio-walkthrough"] { --ground:#14161c; --ink:#ffffff; --paper:#1c1f27; --a1:#2f6fed; --a2:#7c4dff; --a3:#2f6fed; --title:72px; --stroke:4px; --glow:none; --ms:260ms; --rise:12px; --card-radius:24px; --card-border:2px solid var(--a1); }
+  [data-look="clippings"] { --ground:#101512; --ink:#1a1a1a; --paper:#f3f1ea; --a1:#35c46a; --a2:#ffe14d; --a3:#35c46a; --font:Georgia, "Times New Roman", serif; --weight:600; --title:80px; --label:54px; --stroke:28px; --glow:none; --cap:square; --ms:300ms; --ease:ease-in-out; --card-rot:1deg; --card-shadow:0 30px 50px rgba(0,0,0,.55); --card-border:none; --card-radius:2px; --drift-scale:1.06; --drift-y:-24px; }
+  [data-look="doodle"] { --ground:#ffffff; --ink:#111111; --paper:#ffffff; --a1:#d9342b; --a2:#d9342b; --a3:#d9342b; --font:"Comic Sans MS", "Chalkboard SE", "Segoe Print", cursive; --case:uppercase; --title:80px; --label:60px; --stroke:4px; --glow:none; --ms:180ms; --rise:16px; --from:0.9; --card-radius:12px; --card-border:4px solid var(--ink); }
+  [data-look="lecture-slides"] { --ground:#f3f4f6; --ink:#1f2328; --paper:#ffffff; --a1:#b04a00; --a2:#1f6feb; --a3:#ff9900; --weight:400; --title:72px; --label:54px; --stroke:3px; --glow:none; --cap:butt; --ms:200ms; --card-radius:4px; --card-border:1px solid #d0d4da; }
+  [data-look="archive-camera"] { --ground:#0e0c0a; --ink:#1c1a17; --paper:#efe6d6; --a1:#a63d2f; --a2:#35577a; --a3:#a63d2f; --font:Georgia, "Times New Roman", serif; --weight:400; --title:72px; --label:54px; --stroke:3px; --glow:none; --ms:600ms; --ease:ease-in-out; --card-radius:0; --card-border:none; --drift-scale:1.07; --drift-y:-32px; }
+
+  html, body { margin:0; width:1920px; height:1080px; overflow:hidden; background:var(--ground); font-family:var(--font); font-weight:var(--weight); color:var(--ink); }
+  #stage { position:relative; width:1920px; height:1080px; }
+  /* only the evidence drifts under the camera; text stays inside title safe (C-COMP-1) */
+  #art { position:absolute; left:0; top:0; width:1920px; height:1080px; transform-origin:1300px 480px; }
+  /* light grounds read the title in ink; dark grounds in ink too, ink is set per look */
+  #title { position:absolute; left:120px; top:90px; font-size:var(--title); line-height:1.15; text-transform:var(--case); color:var(--ink); max-width:1500px; }
+  [data-look="clippings"] #title, [data-look="archive-camera"] #title { color:var(--paper); }
+  #title u { text-decoration:none; position:relative; }
+  #under { position:absolute; left:120px; top:calc(90px + var(--title) * 1.25); width:620px; height:40px; overflow:visible; }
+  #under path { fill:none; stroke:var(--a1); stroke-width:var(--stroke); stroke-linecap:var(--cap); filter:drop-shadow(var(--glow) var(--a1)); stroke-dasharray:640; stroke-dashoffset:640; }
+  [data-look="clippings"] #under path { opacity:.45; }
+  #card { position:absolute; left:820px; top:210px; width:960px; height:540px; background:var(--paper); border-radius:var(--card-radius); border:var(--card-border); box-shadow:var(--card-shadow); transform:rotate(var(--card-rot)); overflow:hidden; }
+  #card .bar { height:64px; display:flex; align-items:center; gap:14px; padding:0 24px; border-bottom:1px solid rgba(127,127,127,.35); font-size:var(--body); }
+  #card .bar i { width:18px; height:18px; border-radius:50%; background:rgba(127,127,127,.5); display:inline-block; }
+  #card .row { height:78px; margin:22px 28px 0; border-radius:8px; background:rgba(127,127,127,.18); display:flex; align-items:center; padding:0 22px; font-size:var(--body); }
+  #card .row.on { outline:var(--stroke) solid var(--a2); outline-offset:-2px; }
+  [data-look="doodle"] #card { transform:rotate(-0.6deg); }
+  [data-look="lecture-slides"] #card .bar { background:#f3f4f6; }
+  #label { position:absolute; left:120px; top:560px; font-size:var(--label); line-height:1.2; max-width:600px; text-transform:var(--case); color:var(--ink); }
+  [data-look="clippings"] #label, [data-look="archive-camera"] #label { color:var(--paper); }
+  #label b { color:var(--a1); font-weight:inherit; }
+  #arrow { position:absolute; left:120px; top:700px; width:700px; height:120px; }
+  #arrow path { fill:none; stroke:var(--a3); stroke-width:var(--stroke); stroke-linecap:var(--cap); stroke-dasharray:900; stroke-dashoffset:900; filter:drop-shadow(var(--glow) var(--a3)); }
+  [data-look="clippings"] #arrow path { stroke-width:6px; opacity:1; }
+  #id { position:absolute; right:140px; top:800px; font-size:54px; opacity:.85; font-family:Arial, sans-serif; text-transform:none; color:var(--ink); }
+  [data-look="clippings"] #id, [data-look="archive-camera"] #id { color:var(--paper); }
+  .hidden { opacity:0; }
+  #hud { position:absolute; left:8px; bottom:8px; font:16px monospace; color:#888; background:rgba(0,0,0,.4); padding:2px 6px; }
+  #ctl { position:absolute; right:8px; bottom:8px; display:flex; gap:6px; }
+  #ctl button, #ctl select { font:14px sans-serif; }
+  .snap * { transition:none !important; animation:none !important; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="title" class="hidden">Connect a source</div>
+  <svg id="under" viewBox="0 0 640 40"><path d="M4 30 C 120 12, 260 36, 400 20 S 600 10, 636 26"/></svg>
+  <div id="art"><div id="card" class="hidden">
+    <div class="bar"><i></i><i></i><i></i> Placeholder app</div>
+    <div class="row">Sources</div>
+    <div class="row on">Add connection</div>
+    <div class="row">Recent runs</div>
+    <div class="row">Settings</div>
+  </div></div>
+  <div id="label" class="hidden">Pick <b>Add connection</b> first</div>
+  <svg id="arrow" viewBox="0 0 700 120"><path d="M10 100 C 200 110, 420 100, 690 20"/></svg>
+  <div id="id" class="hidden">Evidence CAP-014</div>
+  <div id="hud" data-craft="ignore">0.00 s</div>
+  <div id="ctl" data-craft="ignore">
+    <select id="look"></select>
+    <button id="bPlay">play</button><button id="bPause">pause</button><button id="bBack">back</button>
+  </div>
+</div>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const LOOKS = ['lightboard', 'code-report', 'studio-walkthrough', 'clippings', 'doodle', 'lecture-slides', 'archive-camera'];
+  const DURATION = 8;
+  const css = (n) => getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+  const ms = () => parseFloat(css('--ms')) || 300;
+  const drifts = () => parseFloat(css('--drift-scale')) > 1;
+
+  function enter(el) {
+    el.classList.remove('hidden');
+    const from = parseFloat(css('--from')) || 1, rise = parseFloat(css('--rise')) || 0;
+    const rot = el.id === 'card' ? css('--card-rot') : '0deg';
+    return el.animate(
+      [{ opacity: 0, transform: `translateY(${rise}px) scale(${from}) rotate(${rot})` }, { opacity: 1, transform: `translateY(0) scale(1) rotate(${rot})` }],
+      { duration: ms(), easing: css('--ease') || 'ease-out', fill: 'forwards' });
+  }
+  function draw(svg, len, dur) {
+    return svg.querySelector('path').animate([{ strokeDashoffset: len }, { strokeDashoffset: 0 }], { duration: dur, easing: 'ease-out', fill: 'forwards' });
+  }
+  const BEATS = [
+    [0.0, () => { if (drifts()) $('#art').animate([{ transform: 'scale(1) translateY(0)' }, { transform: `scale(${css('--drift-scale')}) translateY(${css('--drift-y')})` }], { duration: DURATION * 1000, easing: 'ease-in-out', fill: 'forwards' }); }],
+    [0.2, () => enter($('#title'))],
+    [1.0, () => draw($('#under'), 640, 900)],
+    [2.0, () => enter($('#card'))],
+    [3.2, () => enter($('#label'))],
+    [3.6, () => draw($('#arrow'), 900, 700)],
+    [5.0, () => enter($('#id'))],
+  ];
+  const LONGEST = DURATION;   // the drift lasts the whole run, so no beat is ever "over"
+
+  function reset() {
+    document.getAnimations().forEach((a) => a.cancel());
+    for (const id of ['title', 'card', 'label', 'id']) $('#' + id).classList.add('hidden');
+  }
+  const reflow = () => document.body.offsetHeight;
+
+  let playT = 0, look = 'lightboard';
+  function seekTo(t) {
+    pause();
+    playT = t;
+    document.body.classList.add('snap'); reset(); reflow(); document.body.classList.remove('snap'); reflow();
+    const seen = new Set(document.getAnimations());
+    const tagged = [];
+    for (const [bt, fn] of BEATS) {
+      if (bt <= t) { const a = fn(); reflow(); for (const x of document.getAnimations()) if (!seen.has(x)) { seen.add(x); tagged.push([x, bt]); } }
+    }
+    for (const [a, bt] of tagged) { a.pause(); a.currentTime = Math.min((t - bt) * 1000, a.effect.getComputedTiming().endTime); }
+    $('#hud').textContent = t.toFixed(2) + ' s';
+    window.__held = tagged.length;
+  }
+
+  let playing = false, raf = 0, t0 = 0, base = 0, fired = 0, live = [];
+  function play() {
+    if (playing) return;
+    if (playT === 0) { document.body.classList.add('snap'); reset(); reflow(); document.body.classList.remove('snap'); reflow(); fired = 0; live = []; }
+    playing = true; base = playT; t0 = performance.now();
+    const loop = () => {
+      if (!playing) return;
+      playT = Math.min(DURATION, base + (performance.now() - t0) / 1000);
+      while (fired < BEATS.length && BEATS[fired][0] <= playT) { const before = new Set(document.getAnimations()); BEATS[fired][1](); reflow(); for (const a of document.getAnimations()) if (!before.has(a)) live.push([a, BEATS[fired][0]]); fired++; }
+      $('#hud').textContent = playT.toFixed(2) + ' s';
+      if (playT < DURATION) raf = requestAnimationFrame(loop); else playing = false;
+    };
+    raf = requestAnimationFrame(loop);
+  }
+  function pause() { playing = false; cancelAnimationFrame(raf); document.getAnimations().forEach((a) => a.pause()); }
+
+  window.__study = {
+    ready: () => true,
+    duration: () => DURATION,
+    seekTo,
+    playTo: (t) => new Promise((resolve) => {
+      playT = 0; play();
+      const w = () => { if (playT >= t || !playing) { pause();
+        let reached = -1; for (const [a, bt] of live) if (a.currentTime !== null && a.currentTime < a.effect.getComputedTiming().endTime) reached = Math.max(reached, bt + a.currentTime / 1000);
+        if (reached < 0) reached = playT;
+        $('#hud').textContent = reached.toFixed(2) + ' s';
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve(reached))); } else requestAnimationFrame(w); };
+      requestAnimationFrame(w);
+    }),
+    tones: () => LOOKS.slice(),
+    setTone: (name) => { if (!LOOKS.includes(name)) return; look = name; document.documentElement.dataset.look = name; $('#look').value = name; seekTo(playT); },
+    looks: () => LOOKS.slice(),
+  };
+  for (const l of LOOKS) { const o = document.createElement('option'); o.value = o.textContent = l; $('#look').appendChild(o); }
+  $('#look').onchange = (e) => window.__study.setTone(e.target.value);
+  $('#bPlay').onclick = () => { playT = 0; play(); };
+  $('#bPause').onclick = pause;
+  $('#bBack').onclick = () => seekTo(0);
+  const q = new URLSearchParams(location.search).get('look'); if (q) window.__study.setTone(q); else seekTo(0);
+</script>
+</body>
+</html>

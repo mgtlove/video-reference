@@ -1,0 +1,11 @@
+# Stephane Maarek audio, measured (10JKpg-eqZU)
+
+Silent graph, 2x, audio-thread sampling (about 0.19 s of media time per sample); 1183 samples over 4 s to 203 s. The sign-off ran into YouTube's playlist auto-advance, which is why the run was cut at 203 s and the next video's samples discarded.
+
+- Loudness: median RMS 0.101, 90th percentile 0.197, 99th 0.296; 10th percentile 0.007. Dynamic range 32.4 dB, between IBM's 63 (a room with silences) and Fireship's 17 (a cut voice). The histogram has a silence bin (224 samples, 19 percent) and then a broad hump from 0.06 to 0.16: a voice that breathes but is never far from the microphone.
+- Pauses: 22 of 0.3 s or more at the 0.01 threshold (10 s in total), only one over a second (the 1.2 s before the first word). Typical pauses are 0.5 to 0.8 s and sit at the slide and section changes (0:53 "so how does a DNS work", 1:17, 1:34, 2:02 "so routed 53 can use", 2:46 "so last thing"). Natural breath pauses, unedited, none held for effect.
+- Music bed: none; the intro and the "Happy learning" card are silent on this upload.
+- Timbre: spectral centroid median 2322 Hz (1733 to 2859), bright and open like IBM's, wider than the two comedians'. The accent sits in the high consonants.
+- Loudest cues: 1:18 to 1:20 "the Route 53 server will reply and say by the way, in my records it looks like this" (0.156, 0.147), then the close 3:05 to 3:12 ("you'll have to pay a little bit of money", "so that's it for just the overview", "advanced features as well but for now", "if you go along with me in this lecture"). The loudest moment is the mechanism's reply step, told as a voice ("by the way, in my records..."), and the close rises as a teacher's does when the bell is near.
+- Quietest cues: 3:16 "try out a small record" (0.055, the last words), 0:04 "okay so let's talk about route 53" (0.063, the first words), 2:00 "there is an HTTP request" (0.074, the summary's second half), 2:23 "you'll have to make this a private" (0.076). Starts and ends are soft; the loud middle is the story.
+- Pattern: energy follows narrative, not emphasis words: the moment he voices the server ("by the way...") is the loudest line, and the two-step summary is among the quietest. Definitions are read level; the story is performed.

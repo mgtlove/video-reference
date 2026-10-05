@@ -1,0 +1,183 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Study: holding CSS transitions, CSS animations and WAAPI at an exact time</title>
+<!--
+  Study example for video-reference. No library. Opens from file://.
+  The question this answers: the rig's motion runs on CSS transitions, CSS
+  keyframe animations and element.animate(), started by beats at known
+  times. Can a page like that be put at an exact time t, including the
+  middle of a transition, so a frame-by-frame render is possible?
+  The answer is document.getAnimations(): every running CSS transition,
+  CSS animation and WAAPI animation is an Animation object whose
+  currentTime can be set while paused. seekTo(t) below:
+    1. resets the page to its start state,
+    2. replays every beat that is over by t with transitions off (snap),
+    3. replays the beats still in flight, in order, with motion on, tagging
+       the Animation objects each one creates with that beat's time,
+    4. pauses every animation and sets currentTime = t minus its beat time.
+  Real playback is the same beats fired by a clock, motion on, nothing set.
+  check.js proves the two paths give the same pixels.
+-->
+<style>
+  :root {
+    --stage: #23262b; --chalk: #f2efe9; --muted: #a7acb4;
+    --accent: #5fd1c4; --accent-2: #ffb454; --accent-3: #f26d7d;
+    --card: #2f333a; --card-line: #454a53; --stroke-w: 6px;
+    --face: "Segoe UI", Arial, Helvetica, sans-serif;
+    --ease: cubic-bezier(.2,.7,.2,1); --dur: 1s; --enter: 0.9s;
+  }
+  :root[data-tone="formal"] { --accent: #8fb3c9; --accent-2: #8fb3c9; --accent-3: #8fb3c9; --stroke-w: 3px; --ease: ease-out; --dur: 0.6s; --enter: 0.5s; }
+  html, body { margin: 0; background: var(--stage); color: var(--chalk); font-family: var(--face); }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+
+  /* 1. a CSS transition: opacity and a slide, started by adding .on */
+  #title { position: absolute; left: 160px; top: 140px; font-size: 96px; font-weight: 600; opacity: 0; transform: translateY(30px); transition: opacity var(--dur) var(--ease), transform var(--dur) var(--ease); }
+  #title.on { opacity: 1; transform: none; }
+
+  /* 2. CSS keyframe animations with per-card delay, started by adding .on */
+  #cards { position: absolute; left: 160px; top: 380px; display: flex; gap: 48px; }
+  .card { width: 480px; height: 300px; background: var(--card); border: 2px solid var(--card-line); border-radius: 18px; padding: 36px; box-sizing: border-box; opacity: 0; }
+  .card h3 { margin: 0 0 14px; font-size: 40px; font-weight: 600; }
+  .card p { margin: 0; font-size: 28px; color: var(--muted); line-height: 1.35; }
+  .card .dot { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-2); margin-bottom: 24px; }
+  @keyframes enter { from { opacity: 0; transform: translateY(60px) scale(.9); } to { opacity: 1; transform: none; } }
+  #cards.on .card { animation: enter var(--enter) var(--ease) both; }
+  #cards.on .card:nth-child(2) { animation-delay: .15s; }
+  #cards.on .card:nth-child(3) { animation-delay: .3s; }
+
+  /* 3. a transition on transform: the highlight box travels between cards */
+  #hl { position: absolute; left: 144px; top: 364px; width: 512px; height: 332px; border: var(--stroke-w) solid var(--accent-3); border-radius: 26px; box-sizing: border-box; opacity: 0; transition: transform var(--dur) var(--ease), opacity .4s; }
+  #hl.on { opacity: 1; }
+  #hl.two { transform: translateX(528px); }
+  #hl.three { transform: translateX(1056px); }
+
+  /* 4. a keyframe line draw, the rig's stroke technique */
+  #line { position: absolute; left: 150px; top: 760px; width: 900px; height: 60px; overflow: visible; }
+  #line path { fill: none; stroke: var(--accent); stroke-width: var(--stroke-w); stroke-linecap: round; stroke-dasharray: 1000; stroke-dashoffset: 1000; }
+  @keyframes draw { to { stroke-dashoffset: 0; } }
+  #line.on path { animation: draw 1.2s ease-in-out forwards; }
+
+  /* 5. element.animate() pulse on the dot of the chosen card, started by a beat */
+  #hud { position: absolute; left: 24px; bottom: 20px; font-size: 22px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  #ctl { position: absolute; right: 24px; bottom: 16px; display: flex; gap: 8px; }
+  #ctl button { font: inherit; font-size: 20px; padding: 6px 14px; background: var(--card); color: var(--chalk); border: 1px solid var(--card-line); border-radius: 8px; cursor: pointer; }
+  .snap * { transition: none !important; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="title">Held at an exact time</div>
+  <div id="cards">
+    <div class="card"><div class="dot"></div><h3>Transition</h3><p>opacity and transform, started by a class.</p></div>
+    <div class="card"><div class="dot" id="dot2"></div><h3>Keyframes</h3><p>three cards, one animation, staggered by delay.</p></div>
+    <div class="card"><div class="dot"></div><h3>WAAPI</h3><p>element.animate(), paused and set.</p></div>
+  </div>
+  <div id="hl"></div>
+  <svg id="line" viewBox="0 0 900 60"><path d="M10 30 C 200 20 400 44 880 34"></path></svg>
+  <div id="hud" data-craft="ignore">0.00 s</div>
+  <div id="ctl" data-craft="ignore"><button id="bPlay">play</button><button id="bPause">pause</button><button id="bBack">0</button><button id="bTone">tone</button></div>
+</div>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const DURATION = 9;
+  let tone = 'full';
+
+  // The beats: time in seconds, and what changes. This is the rig's at().
+  const BEATS = [
+    [0.3, () => $('#title').classList.add('on')],
+    [1.5, () => $('#cards').classList.add('on')],
+    [3.0, () => $('#hl').classList.add('on')],
+    [4.0, () => $('#hl').classList.add('two')],
+    [5.2, () => $('#hl').classList.replace('two', 'three')],
+    [6.0, () => $('#line').classList.add('on')],
+    [6.8, () => $('#dot2').animate([{ transform: 'scale(1)' }, { transform: 'scale(2.2)' }, { transform: 'scale(1)' }], { duration: 900, easing: 'ease-in-out', fill: 'forwards' })],
+  ];
+  const LONGEST = 2.0;   // no beat's motion lasts longer than this; beats older than that are snapped
+
+  function reset() {
+    document.getAnimations().forEach((a) => a.cancel());
+    $('#title').className = ''; $('#cards').className = ''; $('#hl').className = ''; $('#line').className = '';
+  }
+  const reflow = () => document.body.offsetHeight;
+
+  function seekTo(t) {
+    pause();
+    playT = t;
+    // 1. and 2. everything that is over by t, with transitions off
+    document.body.classList.add('snap');
+    reset();
+    reflow();
+    for (const [bt, fn] of BEATS) if (bt <= t && t - bt >= LONGEST) fn();
+    reflow();
+    // .snap silences transitions; keyframe and WAAPI animations started by
+    // those beats are jumped to their end instead (they all fill forwards)
+    document.getAnimations().forEach((a) => a.finish());
+    document.body.classList.remove('snap');
+    reflow();
+    // 3. the beats still in flight, with motion on, each tagged with its time
+    const seen = new Set(document.getAnimations());
+    const tagged = [];
+    for (const [bt, fn] of BEATS) {
+      if (bt <= t && t - bt < LONGEST) {
+        fn();
+        reflow();
+        for (const a of document.getAnimations()) if (!seen.has(a)) { seen.add(a); tagged.push([a, bt]); }
+      }
+    }
+    // 4. hold each at its own age
+    for (const [a, bt] of tagged) { a.pause(); a.currentTime = (t - bt) * 1000; }
+    $('#hud').textContent = t.toFixed(2) + ' s';
+    window.__held = tagged.length;   // how many animations this seek is holding, for the notes
+  }
+
+  // Real playback: beats fired by a clock, motion on, nothing set.
+  let playing = false, raf = 0, t0 = 0, base = 0, playT = 0, fired = 0, live = [];
+  function play() {
+    if (playing) return;
+    if (playT === 0) { document.body.classList.add('snap'); reset(); reflow(); document.body.classList.remove('snap'); reflow(); fired = 0; live = []; }
+    playing = true; base = playT; t0 = performance.now();
+    const loop = () => {
+      if (!playing) return;
+      playT = Math.min(DURATION, base + (performance.now() - t0) / 1000);
+      while (fired < BEATS.length && BEATS[fired][0] <= playT) { const before = new Set(document.getAnimations()); BEATS[fired][1](); reflow(); for (const a of document.getAnimations()) if (!before.has(a)) live.push([a, BEATS[fired][0]]); fired++; }
+      $('#hud').textContent = playT.toFixed(2) + ' s';
+      if (playT < DURATION) raf = requestAnimationFrame(loop); else playing = false;
+    };
+    raf = requestAnimationFrame(loop);
+  }
+  function pause() { playing = false; cancelAnimationFrame(raf); document.getAnimations().forEach((a) => a.pause()); }
+
+  window.__study = {
+    ready: () => true,
+    duration: () => DURATION,
+    seekTo,
+    playTo: (t) => new Promise((resolve) => {
+      // play from the start (playback does not know how to begin mid-way; a recording never needs to)
+      playT = 0; play();
+      const w = () => { if (playT >= t || !playing) { pause();
+        // the exact time reached is read off the animations themselves, not the clock:
+        // the clock was read at the top of a frame and the motion ran on to the pause
+        // a beat fires on a frame boundary, up to one frame after its time, so the
+        // motion it started runs that much behind the clock; the animations' own
+        // time is the truth, and it is what a seek to the same moment reproduces
+        let reached = -1; for (const [a, bt] of live) if (a.currentTime !== null && a.currentTime < a.effect.getComputedTiming().endTime) reached = Math.max(reached, bt + a.currentTime / 1000);
+        if (reached < 0) reached = playT;
+        $('#hud').textContent = reached.toFixed(2) + ' s';
+        // transform transitions run on the compositor thread, which can be a frame ahead of
+        // the main thread; two frames after the pause the picture shows the paused time exactly
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve(reached))); } else requestAnimationFrame(w); };
+      requestAnimationFrame(w);
+    }),
+    tones: () => ['full', 'formal'],
+    setTone: (name) => { tone = name; document.documentElement.dataset.tone = name; seekTo(playT); },
+  };
+  $('#bPlay').onclick = () => { playT = 0; play(); };
+  $('#bPause').onclick = pause;
+  $('#bBack').onclick = () => seekTo(0);
+  $('#bTone').onclick = () => window.__study.setTone(tone === 'full' ? 'formal' : 'full');
+  seekTo(0);
+</script>
+</body>
+</html>

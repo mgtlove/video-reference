@@ -1,0 +1,11 @@
+# Casually Explained audio, measured (tqcThEqoYmA)
+
+Silent graph (gain 0), 2x with pitch preserved, sampled from the audio thread every 4096 samples (about 0.19 s of media time at 2x); 2187 samples over 371 s. Pause detection is therefore coarse to about 0.2 s.
+
+- Loudness: median RMS 0.078, 90th percentile 0.135, 99th 0.195; 10th percentile 0.024. Dynamic range 18.2 dB. The histogram is a single hump centred on 0.06 to 0.08 with a short tail: the flattest voice of the set so far. Nothing is ever loud; the top 1 percent is only 2.5 times the median.
+- Pauses: at the 0.01 threshold, 7 pauses of 0.3 s or more in six minutes, one over a second: 1.7 s at 4:58, which is the beat between "when is it okay to violate your moral principles?" and "Exactly. It has to be at least six figures." The others are at 0:02 (after "This video is sponsored by Saily"), 0:46 (before "What a lot of people get wrong"), 0:27, 3:50 (after "Mechatronics"), 5:03. The voice is cut tight like Fireship's, but it keeps one deliberate silence for the biggest line.
+- Music bed: none under the voice (gaps go to 0.0005); the only music cue is the end card at 6:07.
+- Timbre: spectral centroid median 1936 Hz (1618 to 2415); a mid voice, slightly brighter than Fireship's, narrow range: the delivery does not move. The monotone is measurable.
+- Loudest cues: 2:09 "because getting an undergraduate degree" (0.109), 5:52 "you can also get multi-region" (0.108), 1:57 "is traumatizing because if you hear" (0.104), 2:51 "With that said, when it comes to the" (0.102), 1:39 "Mechanical engineers scrape by" (0.101). The loud lines are set-ups and transitions, never punchlines.
+- Quietest cues: 4:56 to 4:58 "it okay to violate your moral principles?" (0.041), 4:07 "have even understood what they learned" (0.042), 3:46 "Mechatronics. Oh, don't know how" (0.052). The quiet lines are the questions and the throwaway. The two biggest jokes in the video (the moral question and "Mechatronics") are both delivered under the median loudness, and the moral question is followed by the only real pause.
+- Pattern: set-up slightly louder, punchline quieter, and the frame changes on the last word (shot log). The voice drops to deliver, the picture confirms a beat later, the next set-up starts at once.

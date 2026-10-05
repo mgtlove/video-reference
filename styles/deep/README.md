@@ -1,3 +1,22 @@
-# deep
+# Deep pass: how these files were made
 
-Being rewritten; see the README at the root for what belongs here.
+Second pass over the seven creators, 1 Oct 2026, after the first pass was judged too shallow and too filtered. The rule for this pass: record what the creator does, completely, with numbers where a number exists, and keep every judgement about what we should do out of these files. The applied layer lives elsewhere (`styles/looks.json`, the craft rules). Nothing of the creators' is stored: no frame, clip, logo or caption file; the shot logs describe pictures in words and quote at most a phrase.
+
+## Three instruments, all inside the YouTube tab in the built-in browser
+
+1. **Shot detection by frame differencing.** The video element is drawn to a 48x27 canvas at a fixed step (0.5 s for videos under 20 minutes, 1 s for longer ones, sampled windows for the two-hour documentary) and the mean per-channel difference between consecutive frames is recorded with the mean luminance and mean colour. A cut is a difference over a threshold chosen per video from the distribution (0.25 for footage that never stops moving, 0.18 for composited graphics, 0.06 for held white frames with small additions, 0.045 for a dark lightboard; thin light-grey slide text defeats it entirely, and those builds were read from full-size frames instead). The canvas is not tainted because YouTube's player feeds the element from a same-origin MediaSource. Output: a shot list with start, duration, luminance, in-shot motion and average colour.
+2. **Montage sheets.** For each shot (or for fixed times when the shot list is useless, as on the lightboard and the slides), the frame is drawn into a 3 by 3 or 3 by 4 grid on a canvas fixed over the page, with the shot number, time, duration, motion score and the caption cues that overlap it written under each thumbnail. One screenshot of the sheet shows nine to twelve shots with their words. The shot log is written from these sheets; the relation code (literal, illustrate, evidence, pun, counterpoint, reaction, text, ident, demo, ambient, drawing, clipping) is a judgement made with the words and the picture side by side, which is the whole point.
+3. **Silent audio measurement.** The video element is routed into a Web Audio graph whose last node is a gain at zero, so nothing reaches the speakers by construction; the element is then unmuted and played at 2x with pitch preserved. A ScriptProcessorNode on the audio thread records RMS loudness per 4096 samples (about 0.19 s of media time at 2x) with a spectral centroid and the share of energy under 200 Hz. From that: loudness distribution and dynamic range, pauses by threshold (0.3 s or longer), the music bed (present if the quietest gaps never reach silence), and the loudest and quietest caption cues, which is how emphasis is located without an ear. The run has to happen on the fronted tab (a background tab will not start playback) and ends before the last second, because YouTube's playlist auto-advance otherwise carries the measurement into the next video. The analyser-only version driven by requestAnimationFrame was abandoned: the pane throttles rAF to one frame a second when it is not painting.
+
+Captions come from the timedtext endpoint the player itself requests (captured by patching fetch and XMLHttpRequest and toggling CC once), as json3 cues with start and duration; auto captions have no punctuation, so sentence statistics are only computed for manual ones.
+
+## Files
+
+For each creator: `<name>-shotlog.md` (every shot or every sampled frame, with words, picture, relation and notes, then counts), `<name>-rhetoric.md` (the argument move by move, theses and subtext, a counted humour taxonomy, and the word-and-picture mechanism), `<name>-audio.md` (the measurements and what they say about delivery). The lightboard has a `board-timeline` instead of a shot log because the frame is one continuous shot and what matters is the drawing's life.
+
+## Limits
+
+- Pitch and intonation are not measured (the centroid is a timbre proxy); a line read with a smile is invisible here.
+- Thumbnails at 266 px cannot show thin slide text; those builds were confirmed at full size.
+- One video per creator. A channel's style is a range; these are one point in it.
+- The relation codes are one reader's judgement. Two shots with the same picture can be literal under one sentence and counterpoint under another, and the code was assigned from the cues printed under the thumbnail, which lag the audio by up to a second.

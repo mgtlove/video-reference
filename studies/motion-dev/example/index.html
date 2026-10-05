@@ -1,0 +1,175 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Study: Motion (motion.dev) on a 1920x1080 stage</title>
+<!--
+  Study example for video-reference. Opens from file://, no network.
+  Library: Motion v13.4.6 ("motion" on npm, MIT, by Motion B.V.), the UMD
+  build vendored in vendor/ with its licence; it defines window.Motion.
+  Same four scenes as the anime.js study, so the two can be compared still
+  for still:
+    0 to 3 s    title revealed per character (our own split, stagger()),
+                underline drawn on (pathLength)
+    3 to 6.5 s  three cards enter from the centre out (spring), a frame draws
+    6.5 to 10 s a shape rotates and scales on independent transforms while
+                a pointer moves along a route we sample ourselves
+    10 to 13 s  a counter tweens a number, bars grow
+  One sequence, seeked through controls.time. Tokens for colours; the
+  'formal' tone swaps tokens and rebuilds the sequence.
+-->
+<style>
+  :root {
+    --stage: #23262b; --chalk: #f2efe9; --muted: #a7acb4;
+    --accent: #5fd1c4; --accent-2: #ffb454; --accent-3: #f26d7d;
+    --card: #2f333a; --card-line: #454a53; --stroke-w: 6px;
+    --face: "Segoe UI", Arial, Helvetica, sans-serif;
+  }
+  :root[data-tone="formal"] { --accent: #8fb3c9; --accent-2: #8fb3c9; --accent-3: #8fb3c9; --stroke-w: 3px; }
+  html, body { margin: 0; background: var(--stage); color: var(--chalk); font-family: var(--face); }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+  .scene { position: absolute; inset: 0; opacity: 0; }
+  #title { position: absolute; left: 160px; top: 380px; font-size: 96px; font-weight: 600; letter-spacing: -1px; white-space: pre; }
+  #title span { display: inline-block; }
+  #underline { position: absolute; left: 150px; top: 500px; width: 900px; height: 60px; overflow: visible; }
+  #underline path { fill: none; stroke: var(--accent); stroke-width: var(--stroke-w); stroke-linecap: round; }
+  #cards { position: absolute; left: 160px; top: 300px; display: flex; gap: 48px; }
+  .card { width: 480px; height: 300px; background: var(--card); border: 2px solid var(--card-line); border-radius: 18px; padding: 36px; box-sizing: border-box; }
+  .card h3 { margin: 0 0 14px; font-size: 40px; font-weight: 600; }
+  .card p { margin: 0; font-size: 28px; color: var(--muted); line-height: 1.35; }
+  .card .dot { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-2); margin-bottom: 24px; }
+  #frame { position: absolute; inset: 0; width: 1920px; height: 1080px; overflow: visible; }
+  #frame rect { fill: none; stroke: var(--accent-3); stroke-width: var(--stroke-w); rx: 22px; }
+  #shape { position: absolute; left: 260px; top: 340px; width: 400px; height: 400px; background: var(--accent); border-radius: 60px; }
+  #route { position: absolute; left: 960px; top: 200px; width: 800px; height: 700px; overflow: visible; }
+  #route .path { fill: none; stroke: var(--card-line); stroke-width: 3px; stroke-dasharray: 10 14; }
+  #route .pointer { fill: var(--accent-2); }
+  #route .label { font-size: 30px; fill: var(--muted); }
+  #counter { position: absolute; left: 160px; top: 380px; font-size: 220px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent-2); line-height: 1; }
+  #counterLabel { position: absolute; left: 170px; top: 640px; font-size: 44px; color: var(--muted); }
+  #bars { position: absolute; left: 1000px; top: 300px; display: flex; gap: 40px; align-items: flex-end; height: 500px; }
+  #bars div { width: 90px; background: var(--accent); border-radius: 8px 8px 0 0; transform-origin: bottom; }
+  #hud { position: absolute; left: 24px; bottom: 20px; font-size: 22px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  #ctl { position: absolute; right: 24px; bottom: 16px; display: flex; gap: 8px; }
+  #ctl button { font: inherit; font-size: 20px; padding: 6px 14px; background: var(--card); color: var(--chalk); border: 1px solid var(--card-line); border-radius: 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="scene" id="s1">
+    <div id="title"></div>
+    <svg id="underline" viewBox="0 0 900 60"><path id="ul" d="M10 30 C 200 20 400 44 880 34"></path></svg>
+  </div>
+  <div class="scene" id="s2">
+    <div id="cards">
+      <div class="card"><div class="dot"></div><h3>Stagger</h3><p>Cards enter from the centre out, spring eased.</p></div>
+      <div class="card"><div class="dot"></div><h3>Sequence</h3><p>One sequence, labels, absolute and relative positions.</p></div>
+      <div class="card"><div class="dot"></div><h3>Seek</h3><p>Any time can be set and held.</p></div>
+    </div>
+    <svg id="frame"><rect id="fr"></rect></svg>
+  </div>
+  <div class="scene" id="s3">
+    <div id="shape"></div>
+    <svg id="route" viewBox="0 0 800 700">
+      <path class="path" id="routePath" d="M 80 600 C 200 200 380 700 480 380 S 700 120 720 100"></path>
+      <circle class="pointer" id="pointer" r="18"></circle>
+      <text class="label" x="60" y="660">a pointer on a route sampled from the path</text>
+    </svg>
+  </div>
+  <div class="scene" id="s4">
+    <div id="counter">0</div>
+    <div id="counterLabel">screens recreated</div>
+    <div id="bars"><div></div><div></div><div></div><div></div><div></div></div>
+  </div>
+  <div id="hud" data-craft="ignore">0.00 s</div>
+  <div id="ctl" data-craft="ignore"><button id="bPlay">play</button><button id="bPause">pause</button><button id="bBack">0</button><button id="bTone">tone</button></div>
+</div>
+
+<script src="vendor/motion.js"></script>
+<script>
+  const { animate, stagger } = Motion;
+  const $ = (s) => document.querySelector(s);
+  let controls = null, counterAnim = null, tone = 'full';
+  const counter = { n: 0 };
+
+  // Our own character split: Motion has no splitText.
+  const TITLE = 'Motion on the stage';
+  $('#title').innerHTML = TITLE.split('').map((c) => `<span>${c === ' ' ? ' ' : c}</span>`).join('');
+
+  // Motion has no motion-path helper in the vanilla API, so the route is
+  // sampled from the SVG path into keyframe arrays. Deterministic and cheap.
+  const routePts = (() => {
+    const p = $('#routePath'), L = p.getTotalLength(), n = 60, xs = [], ys = [];
+    for (let i = 0; i <= n; i++) { const pt = p.getPointAtLength(L * i / n); xs.push(pt.x); ys.push(pt.y); }
+    return { xs, ys };
+  })();
+
+  function build(toneName) {
+    tone = toneName;
+    document.documentElement.dataset.tone = toneName;
+    const formal = toneName === 'formal';
+    if (controls) controls.cancel();     // cancel() reverts every element to its start values
+
+    const card2 = document.querySelectorAll('.card')[1].getBoundingClientRect();
+    const fr = $('#fr'); fr.setAttribute('x', card2.left - 16); fr.setAttribute('y', card2.top - 16);
+    fr.setAttribute('width', card2.width + 32); fr.setAttribute('height', card2.height + 32);
+
+    const springy = formal ? { ease: 'easeOut' } : { type: 'spring', bounce: 0.3 };
+    const seq = [
+      // scene 1
+      ['#s1', { opacity: [1, 1] }, { at: 0, duration: 0.001 }],
+      ['#title span', { y: [40, 0], opacity: [0, 1] }, { at: 'title', duration: formal ? 0.5 : 0.7, delay: stagger(formal ? 0.02 : 0.035), ease: formal ? 'easeOut' : 'backOut' }],
+      ['#ul', { pathLength: [0, 1] }, { at: 0.6, duration: 0.9, ease: 'easeInOut' }],
+      ['#s1', { opacity: [1, 0] }, { at: 3, duration: 0.001 }],
+      // scene 2
+      ['#s2', { opacity: [0, 1] }, { at: 3, duration: 0.001 }],
+      ['.card', { opacity: [0, 1], scale: [0.8, 1], y: [60, 0] }, { at: 3, duration: 0.8, delay: stagger(formal ? 0.09 : 0.16, { from: 'center' }), ...springy }],
+      ['#fr', { pathLength: [0, 1] }, { at: 4, duration: 0.9, ease: 'easeInOut' }],
+      ['#s2', { opacity: [1, 0] }, { at: 6.5, duration: 0.001 }],
+      // scene 3
+      ['#s3', { opacity: [0, 1] }, { at: 6.5, duration: 0.001 }],
+      ['#shape', { rotate: [0, 90], scale: [1, 0.7], borderRadius: ['60px', '200px'] }, { at: 6.8, duration: 2, ease: 'easeInOut' }],
+      ['#pointer', { cx: routePts.xs, cy: routePts.ys }, { at: 6.5, duration: 2.8, ease: 'easeInOut' }],
+      ['#s3', { opacity: [1, 0] }, { at: 10, duration: 0.001 }],
+      // scene 4
+      ['#s4', { opacity: [0, 1] }, { at: 10, duration: 0.001 }],
+      ['#bars div', { scaleY: [0, 1] }, { at: 10, duration: 0.9, delay: stagger(0.09), ease: 'easeOut' }],
+      ['#s4', { opacity: [1, 1] }, { at: 13, duration: 0.001 }],
+    ];
+    const heights = [60, 160, 320, 240, 460];
+    document.querySelectorAll('#bars div').forEach((el, i) => { el.style.height = heights[i] + 'px'; });
+    controls = animate(seq);
+    // A plain-object tween inside a sequence never ran its onUpdate here
+    // (measured: the counter stayed at 0 in play and in seek), while the same
+    // tween on its own works and seeks. So the counter is its own animation,
+    // delayed to 10 s, and seekTo() sets both clocks.
+    if (counterAnim) counterAnim.cancel();
+    counterAnim = animate(counter, { n: [0, 42] }, { duration: 1.8, delay: 10, ease: 'circOut', onUpdate: () => { $('#counter').textContent = Math.round(counter.n); } });
+    counterAnim.pause();
+    controls.pause();
+    controls.time = 0; counterAnim.time = 0;
+  }
+
+  const hud = $('#hud');
+  const show = () => { hud.textContent = controls.time.toFixed(2) + ' s'; };
+  window.__study = {
+    ready: () => !!controls,
+    duration: () => controls.duration,
+    seekTo: (t) => { const tt = Math.max(0, Math.min(t, controls.duration)); controls.pause(); counterAnim.pause(); controls.time = tt; counterAnim.time = tt; show(); },
+    playTo: (t) => new Promise((resolve) => {
+      controls.play(); counterAnim.play();
+      const tick = () => { show(); if (controls.time >= t) { controls.pause(); counterAnim.pause(); counterAnim.time = controls.time; resolve(controls.time); } else requestAnimationFrame(tick); };
+      requestAnimationFrame(tick);
+    }),
+    tones: () => ['full', 'formal'],
+    setTone: (name) => build(name),
+  };
+  $('#bPlay').onclick = () => { controls.play(); counterAnim.play(); (function loop() { show(); if (!controls.paused) requestAnimationFrame(loop); })(); };
+  $('#bPause').onclick = () => { controls.pause(); counterAnim.pause(); };
+  $('#bBack').onclick = () => window.__study.seekTo(0);
+  $('#bTone').onclick = () => build(tone === 'full' ? 'formal' : 'full');
+
+  document.fonts.ready.then(() => build('full'));
+</script>
+</body>
+</html>

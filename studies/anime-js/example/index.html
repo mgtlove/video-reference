@@ -1,0 +1,234 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Study: anime.js v4 on a 1920x1080 stage</title>
+<!--
+  Study example for video-reference. Opens from file://, no network.
+  Library: anime.js v4.5.0, MIT, vendored in vendor/ with its licence.
+  What it shows, in order along one timeline:
+    0 to 3 s    title revealed per character (splitText + stagger), hand-drawn
+                underline drawn on (svg.createDrawable on a seeded wobbly path)
+    3 to 6.5 s  three cards enter from the centre out (stagger from 'center',
+                spring ease), then a wobbly frame draws around the middle one
+    6.5 to 10 s a blob morphs into a rounded square (svg.morphTo) while a
+                pointer follows a route (svg.createMotionPath)
+    10 to 13 s  a counter tweens on a plain JS object, and a label scrambles
+                into place (scrambleText with a seed)
+  Everything the tools need is on window.__study; see STUDY-TEMPLATE.md.
+  Colours and faces are tokens; the 'formal' tone changes tokens and rebuilds
+  the timeline with the flourishes removed. No colour literals below this line
+  except inside the :root token blocks.
+-->
+<style>
+  :root {
+    --stage: #23262b;
+    --chalk: #f2efe9;
+    --muted: #a7acb4;
+    --accent: #5fd1c4;
+    --accent-2: #ffb454;
+    --accent-3: #f26d7d;
+    --card: #2f333a;
+    --card-line: #454a53;
+    --stroke-w: 6px;
+    --face: "Segoe UI", Arial, Helvetica, sans-serif;
+    --face-hand: "Segoe Print", "Bradley Hand", "Comic Sans MS", cursive;
+  }
+  :root[data-tone="formal"] {
+    --accent: #8fb3c9;
+    --accent-2: #8fb3c9;
+    --accent-3: #8fb3c9;
+    --stroke-w: 3px;
+    --face-hand: var(--face);
+  }
+  html, body { margin: 0; background: var(--stage); color: var(--chalk); font-family: var(--face); }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+  .scene { position: absolute; inset: 0; }
+
+  /* scene 1: title */
+  #title { position: absolute; left: 160px; top: 380px; font-size: 96px; font-weight: 600; letter-spacing: -1px; white-space: nowrap; }
+  #title .char { display: inline-block; will-change: transform; }
+  #underline { position: absolute; left: 150px; top: 500px; width: 900px; height: 60px; overflow: visible; }
+  #underline path { fill: none; stroke: var(--accent); stroke-width: var(--stroke-w); stroke-linecap: round; stroke-linejoin: round; }
+
+  /* scene 2: cards */
+  #cards { position: absolute; left: 160px; top: 300px; display: flex; gap: 48px; }
+  .card { width: 480px; height: 300px; background: var(--card); border: 2px solid var(--card-line); border-radius: 18px; padding: 36px; box-sizing: border-box; }
+  .card h3 { margin: 0 0 14px; font-size: 40px; font-weight: 600; }
+  .card p { margin: 0; font-size: 28px; color: var(--muted); line-height: 1.35; }
+  .card .dot { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-2); margin-bottom: 24px; }
+  #frame { position: absolute; left: 0; top: 0; width: 1920px; height: 1080px; pointer-events: none; overflow: visible; }
+  #frame path { fill: none; stroke: var(--accent-3); stroke-width: var(--stroke-w); stroke-linecap: round; stroke-linejoin: round; }
+
+  /* scene 3: morph and route */
+  #morph { position: absolute; left: 160px; top: 260px; width: 700px; height: 560px; overflow: visible; }
+  #morph path { fill: var(--accent); }
+  #route { position: absolute; left: 960px; top: 200px; width: 800px; height: 700px; overflow: visible; }
+  #route .path { fill: none; stroke: var(--card-line); stroke-width: 3px; stroke-dasharray: 10 14; }
+  #route .pointer { fill: var(--accent-2); }
+  #route .label { font-size: 30px; fill: var(--muted); }
+
+  /* scene 4: counter and scramble */
+  #counter { position: absolute; left: 160px; top: 380px; font-size: 220px; font-weight: 700; font-variant-numeric: tabular-nums; color: var(--accent-2); line-height: 1; }
+  #counterLabel { position: absolute; left: 170px; top: 640px; font-size: 44px; color: var(--muted); font-family: var(--face-hand); letter-spacing: 1px; white-space: pre; }
+  #bars { position: absolute; left: 1000px; top: 300px; display: flex; gap: 40px; align-items: flex-end; height: 500px; }
+  #bars div { width: 90px; background: var(--accent); border-radius: 8px 8px 0 0; transform-origin: bottom; }
+
+  #hud { position: absolute; left: 24px; bottom: 20px; font-size: 22px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  #ctl { position: absolute; right: 24px; bottom: 16px; display: flex; gap: 8px; }
+  #ctl button { font: inherit; font-size: 20px; padding: 6px 14px; background: var(--card); color: var(--chalk); border: 1px solid var(--card-line); border-radius: 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div class="scene" id="s1">
+    <div id="title">Anime.js on the stage</div>
+    <svg id="underline" viewBox="0 0 900 60"><path id="ul"></path></svg>
+  </div>
+  <div class="scene" id="s2">
+    <div id="cards">
+      <div class="card"><div class="dot"></div><h3>Stagger</h3><p>Cards enter from the centre out, spring eased.</p></div>
+      <div class="card"><div class="dot"></div><h3>Timeline</h3><p>One clock, labels, absolute and relative positions.</p></div>
+      <div class="card"><div class="dot"></div><h3>Seek</h3><p>Any time can be set and held.</p></div>
+    </div>
+    <svg id="frame"><path id="fr"></path></svg>
+  </div>
+  <div class="scene" id="s3">
+    <svg id="morph" viewBox="0 0 700 560"><g transform="translate(70 56) scale(0.8)">
+      <path id="shape" d="M350 60 C 520 40 660 170 640 300 C 620 430 500 530 350 520 C 200 510 60 430 60 290 C 60 150 180 80 350 60 Z"></path>
+      <path id="shapeTo" d="M160 110 H 540 Q 600 110 600 170 V 410 Q 600 470 540 470 H 160 Q 100 470 100 410 V 170 Q 100 110 160 110 Z" style="display:none"></path>
+    </g></svg>
+    <svg id="route" viewBox="0 0 800 700">
+      <path class="path" id="routePath" d="M 80 600 C 200 200 380 700 480 380 S 700 120 720 100"></path>
+      <circle class="pointer" id="pointer" r="18"></circle>
+      <text class="label" x="60" y="660">createMotionPath: pointer on a route</text>
+    </svg>
+  </div>
+  <div class="scene" id="s4">
+    <div id="counter">0</div>
+    <div id="counterLabel">screens recreated</div>
+    <div id="bars"><div></div><div></div><div></div><div></div><div></div></div>
+  </div>
+  <div id="hud" data-craft="ignore">0.00 s</div>
+  <div id="ctl" data-craft="ignore"><button id="bPlay">play</button><button id="bPause">pause</button><button id="bBack">0</button><button id="bTone">tone</button></div>
+</div>
+
+<script src="vendor/anime.umd.js"></script>
+<script>
+  const { createTimeline, stagger, svg, utils, splitText, scrambleText, engine, spring } = anime;
+  engine.pauseOnDocumentHidden = false;   // a hidden tab must not stop a render
+
+  // Seeded geometry: a wobbly hand-drawn line and frame. Same seed, same path,
+  // on every load and on every machine. This is the rig's "seeded strokes" rule.
+  function wobblyLine(x1, y1, x2, y2, seed, amp) {
+    const rnd = utils.createSeededRandom(seed);
+    const n = 12, pts = [];
+    for (let i = 0; i <= n; i++) {
+      const t = i / n;
+      pts.push([x1 + (x2 - x1) * t + rnd(-amp, amp, 2), y1 + (y2 - y1) * t + rnd(-amp, amp, 2)]);
+    }
+    return 'M' + pts.map((p) => p.join(' ')).join(' L ');
+  }
+  function wobblyRect(x, y, w, h, seed, amp) {
+    const rnd = utils.createSeededRandom(seed);
+    const j = () => rnd(-amp, amp, 2);
+    const c = [[x, y], [x + w, y], [x + w, y + h], [x, y + h]].map(([a, b]) => [a + j(), b + j()]);
+    const d = [];
+    for (let i = 0; i < 4; i++) {
+      const [ax, ay] = c[i], [bx, by] = c[(i + 1) % 4];
+      const mx = (ax + bx) / 2 + j(), my = (ay + by) / 2 + j();
+      d.push((i ? '' : `M${ax} ${ay} `) + `Q${mx} ${my} ${bx} ${by}`);
+    }
+    return d.join(' ') + ' ' + `L${c[0][0] + j()} ${c[0][1] + j()}`;
+  }
+
+  // Layout numbers the strokes wrap. Measured once, after fonts are ready.
+  let tl = null, split = null, tone = 'full';
+  const counter = { n: 0 };
+  const $ = (s) => document.querySelector(s);
+
+  function build(toneName) {
+    tone = toneName;
+    document.documentElement.dataset.tone = toneName;
+    const formal = toneName === 'formal';
+    if (tl) tl.revert();          // undo inline styles from a previous build
+    if (split) split.revert();
+
+    $('#ul').setAttribute('d', wobblyLine(10, 30, 880, 34, 11, formal ? 0 : 6));
+    const card2 = document.querySelectorAll('.card')[1].getBoundingClientRect();
+    $('#fr').setAttribute('d', wobblyRect(card2.left - 16, card2.top - 16, card2.width + 32, card2.height + 32, 23, formal ? 0 : 5));
+    split = splitText('#title', { chars: true, words: false });
+
+    const scenes = ['#s1', '#s2', '#s3', '#s4'];
+    // composition 'none' is the finding of this study: with the default
+    // 'replace', overlapping tweens on one property are trimmed for forward
+    // play and a backward seek lands on stale values. 'none' makes every
+    // tween a pure function of time, which is what footage needs.
+    tl = createTimeline({ autoplay: false, defaults: { ease: 'outQuad', composition: 'none' } });
+
+    // Scene switching. Not set(): a set() reads its "from" value off the DOM,
+    // so seeking backwards through stacked set()s lands on the wrong values
+    // (measured here: a seek from 13 s back to 5 s showed no scene at all).
+    // A 1 ms tween with an explicit [from, to], under composition 'none',
+    // renders correctly in both directions, so every scene gets one explicit
+    // in and one explicit out.
+    const windows = { '#s1': [0, 3000], '#s2': [3000, 6500], '#s3': [6500, 10000], '#s4': [10000, 13000] };
+    for (const id of scenes) {
+      const [a, b] = windows[id];
+      tl.add(id, { opacity: [a ? 0 : 1, 1], duration: 1, ease: 'linear' }, a);
+      if (b < 13000) tl.add(id, { opacity: [1, 0], duration: 1, ease: 'linear' }, b);
+    }
+
+    // scene 1
+    tl.label('title', 0)
+      .add(split.chars, { y: [40, 0], opacity: [0, 1], duration: formal ? 500 : 700, delay: stagger(formal ? 20 : 35), ease: formal ? 'outQuad' : 'outBack' }, 'title')
+      .add(svg.createDrawable('#ul'), { draw: ['0 0', '0 1'], duration: 900, ease: 'inOutQuad' }, 'title+=600');
+
+    // scene 2
+    tl.label('cards', 3000)
+      .set('.card', { opacity: 0, scale: 0.8, y: 60 }, 'cards')
+      .add('.card', { opacity: 1, scale: 1, y: 0, duration: 800, delay: stagger(formal ? 90 : 160, { from: 'center' }), ease: formal ? 'outQuad' : spring({ bounce: 0.3 }) }, 'cards')
+      .add(svg.createDrawable('#fr'), { draw: ['0 0', '0 1'], duration: 900, ease: 'inOutSine' }, 'cards+=1000');
+
+    // scene 3
+    tl.label('morph', 6500)
+      .add('#shape', { d: svg.morphTo('#shapeTo'), duration: 2000, ease: 'inOutQuad' }, 'morph+=300')
+      .add('#pointer', { ...svg.createMotionPath('#routePath'), duration: 2800, ease: 'inOutSine' }, 'morph');
+
+    // scene 4
+    tl.label('count', 10000)
+      .add(counter, { n: 42, duration: 1800, ease: 'outExpo', modifier: utils.round(0), onUpdate: () => { $('#counter').textContent = counter.n; } }, 'count')
+      .add('#bars div', { scaleY: [0, 1], height: (el, i) => [60, 160, 320, 240, 460][i] + 'px', duration: 900, delay: stagger(90) }, 'count')
+      .add('#counterLabel', { innerHTML: scrambleText({ text: 'screens recreated', seed: 7, chars: 'a-z', revealRate: 24 }), duration: formal ? 1 : 1600 }, 'count+=200')
+      .add({ duration: 1000 }, 'count+=2000');   // a bare timer holds the run to 13 s
+
+    tl.init();
+    tl.pause();
+    tl.seek(0);
+  }
+
+  // Study contract: what the tools drive. Times in seconds.
+  const hud = $('#hud');
+  window.__study = {
+    ready: () => !!tl,
+    duration: () => tl.duration / 1000,
+    seekTo: (t) => { tl.pause(); tl.seek(Math.max(0, Math.min(t * 1000, tl.duration))); hud.textContent = (tl.currentTime / 1000).toFixed(2) + ' s'; },
+    playTo: (t) => new Promise((resolve) => {
+      const target = t * 1000;
+      tl.onUpdate = () => { hud.textContent = (tl.currentTime / 1000).toFixed(2) + ' s'; if (tl.currentTime >= target) { tl.pause(); tl.onUpdate = () => {}; resolve(tl.currentTime / 1000); } };
+      tl.play();
+    }),
+    tones: () => ['full', 'formal'],
+    setTone: (name) => build(name),
+  };
+
+  $('#bPlay').onclick = () => { tl.onUpdate = () => { hud.textContent = (tl.currentTime / 1000).toFixed(2) + ' s'; }; tl.play(); };
+  $('#bPause').onclick = () => tl.pause();
+  $('#bBack').onclick = () => window.__study.seekTo(0);
+  $('#bTone').onclick = () => build(tone === 'full' ? 'formal' : 'full');
+  document.addEventListener('keydown', (e) => { if (e.key === ' ') { e.preventDefault(); tl.paused ? $('#bPlay').onclick() : tl.pause(); } });
+
+  document.fonts.ready.then(() => build('full'));
+</script>
+</body>
+</html>

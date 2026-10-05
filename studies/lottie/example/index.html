@@ -1,0 +1,91 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Study: Lottie (lottie-web) placed at an exact frame</title>
+<!--
+  Study example for video-reference. Opens from file://, no network.
+  Library: lottie-web 5.13.0 (MIT, Airbnb / Bodymovin), vendored in vendor/.
+  Asset: check.lottie.js, a hand-written Bodymovin animation (a ring that
+  pops in and a tick that draws on, 90 frames at 30 fps), so nothing here
+  is under anyone else's licence. A real asset would come from After Effects
+  with the Bodymovin plugin, or from a marketplace with its licence recorded.
+  What it shows: the player rendering to SVG at 1920x1080 stage scale, held
+  at exact frames with goToAndStop, and recoloured from the page's tokens
+  by CSS over the SVG the player builds.
+-->
+<style>
+  :root {
+    --stage: #23262b; --chalk: #f2efe9; --muted: #a7acb4;
+    --accent: #5fd1c4; --accent-2: #ffb454; --card: #2f333a; --card-line: #454a53;
+    --face: "Segoe UI", Arial, Helvetica, sans-serif;
+  }
+  :root[data-tone="formal"] { --accent: #8fb3c9; --accent-2: #8fb3c9; }
+  html, body { margin: 0; background: var(--stage); color: var(--chalk); font-family: var(--face); }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+  #caption { position: absolute; left: 160px; top: 380px; font-size: 72px; font-weight: 600; width: 900px; line-height: 1.2; }
+  #caption small { display: block; font-size: 36px; color: var(--muted); font-weight: 400; margin-top: 20px; }
+  #lottie { position: absolute; left: 1180px; top: 300px; width: 480px; height: 480px; }
+  /* The SVG renderer writes stroke colours as attributes; a CSS rule wins over
+     an attribute, so the tokens restyle the asset. The layer's "cl" field in
+     the Lottie file becomes the class on its group; the file names two. */
+  #lottie .ring path { stroke: var(--accent); }
+  #lottie .tick path { stroke: var(--accent-2); }
+  #hud { position: absolute; left: 24px; bottom: 20px; font-size: 22px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  #ctl { position: absolute; right: 24px; bottom: 16px; display: flex; gap: 8px; }
+  #ctl button { font: inherit; font-size: 20px; padding: 6px 14px; background: var(--card); color: var(--chalk); border: 1px solid var(--card-line); border-radius: 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="caption">Saved<small>A Lottie asset held at an exact frame, recoloured by the page's tokens</small></div>
+  <div id="lottie"></div>
+  <div id="hud" data-craft="ignore">0.00 s</div>
+  <div id="ctl" data-craft="ignore"><button id="bPlay">play</button><button id="bPause">pause</button><button id="bBack">0</button><button id="bTone">tone</button></div>
+</div>
+<script src="vendor/lottie.min.js"></script>
+<script src="check.lottie.js"></script>
+<script>
+  const $ = (s) => document.querySelector(s);
+  let anim = null, tone = 'full', playing = false, raf = 0, t0 = 0, base = 0, playT = 0;
+  const FPS = window.CHECK_ANIM.fr, FRAMES = window.CHECK_ANIM.op - window.CHECK_ANIM.ip;
+  const DURATION = FRAMES / FPS;
+
+  anim = lottie.loadAnimation({
+    container: $('#lottie'),
+    renderer: 'svg',
+    loop: false,
+    autoplay: false,
+    animationData: window.CHECK_ANIM,   // not `path`: a fetch does not work from file://
+    rendererSettings: { preserveAspectRatio: 'xMidYMid meet' },
+  });
+  anim.setSubframe(false);   // whole frames only, so a seek lands on a frame the asset defines
+
+  // Time to frame: the asset is 30 fps; the study's clock is seconds. A seek
+  // rounds down to the frame that is current at t, which is what a video
+  // frame at t would show.
+  const frameAt = (t) => Math.max(0, Math.min(FRAMES - 1, Math.floor(t * FPS)));
+  function render(t) { anim.goToAndStop(frameAt(t), true); $('#hud').textContent = t.toFixed(2) + ' s  (frame ' + frameAt(t) + ')'; }
+
+  // Playback for the buttons is our own clock calling render(t), not the
+  // player's, so playback and seek are one path.
+  function play() { if (playing) return; playing = true; base = playT; t0 = performance.now();
+    const loop = () => { if (!playing) return; playT = Math.min(DURATION, base + (performance.now() - t0) / 1000); render(playT); if (playT < DURATION) raf = requestAnimationFrame(loop); else playing = false; };
+    raf = requestAnimationFrame(loop); }
+  function pause() { playing = false; cancelAnimationFrame(raf); }
+
+  window.__study = {
+    ready: () => anim && anim.isLoaded,
+    duration: () => DURATION,
+    seekTo: (t) => { pause(); playT = Math.max(0, Math.min(t, DURATION)); render(playT); },
+    playTo: (t) => new Promise((resolve) => { play(); const w = () => { if (playT >= t || !playing) { pause(); resolve(playT); } else requestAnimationFrame(w); }; requestAnimationFrame(w); }),
+    tones: () => ['full', 'formal'],
+    setTone: (name) => { tone = name; document.documentElement.dataset.tone = name; render(playT); },
+  };
+  $('#bPlay').onclick = play; $('#bPause').onclick = pause;
+  $('#bBack').onclick = () => window.__study.seekTo(0);
+  $('#bTone').onclick = () => window.__study.setTone(tone === 'full' ? 'formal' : 'full');
+  anim.addEventListener('DOMLoaded', () => render(0));
+</script>
+</body>
+</html>

@@ -1,0 +1,16 @@
+{
+  "name": "video-reference",
+  "private": true,
+  "description": "Studied animation techniques, craft rules and creator styles for explainer and training video. Read from, never depended on. The scripts render and check a study; they never download a browser.",
+  "scripts": {
+    "stills": "node tools/stills.js",
+    "stills:local": "PW_CHANNEL=chrome node tools/stills.js",
+    "check": "node tools/check.js",
+    "check:local": "PW_CHANNEL=chrome node tools/check.js",
+    "craft": "node tools/craft.js",
+    "craft:local": "PW_CHANNEL=chrome node tools/craft.js"
+  },
+  "devDependencies": {
+    "playwright": "1.56.1"
+  }
+}

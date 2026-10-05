@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Study: three.js as a seekable 3D stage</title>
+<!--
+  Study example for video-reference. Opens from file://, no network.
+  Library: three.js r186 (npm three@0.186.1, MIT), bundled to a classic
+  script in vendor/ (see vendor/README.md).
+  What it shows: three "cards" standing in a room, lit, with their labels
+  drawn onto canvas textures from the page's own tokens. The camera travels
+  round them and one card lifts and turns to face us. There is no animation
+  loop while the study is driven: render(t) sets every position from t and
+  draws one frame, so a seek is one call and a still at t is playback at t.
+  Playback for the buttons is the same render(t) on requestAnimationFrame.
+-->
+<style>
+  :root {
+    --stage: #23262b; --chalk: #f2efe9; --muted: #a7acb4;
+    --accent: #5fd1c4; --accent-2: #ffb454; --accent-3: #f26d7d;
+    --card: #2f333a; --card-line: #454a53;
+    --face: "Segoe UI", Arial, Helvetica, sans-serif;
+    --orbit: 1;            /* how far the camera swings, 1 full, 0 none */
+    --lift: 1;             /* how far the chosen card lifts */
+  }
+  :root[data-tone="formal"] { --accent: #8fb3c9; --accent-2: #8fb3c9; --accent-3: #8fb3c9; --orbit: 0.35; --lift: 0.5; }
+  html, body { margin: 0; background: var(--stage); color: var(--chalk); font-family: var(--face); }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+  canvas { display: block; }
+  #caption { position: absolute; left: 160px; top: 120px; font-size: 64px; font-weight: 600; }
+  #hud { position: absolute; left: 24px; bottom: 20px; font-size: 22px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  #ctl { position: absolute; right: 24px; bottom: 16px; display: flex; gap: 8px; }
+  #ctl button { font: inherit; font-size: 20px; padding: 6px 14px; background: var(--card); color: var(--chalk); border: 1px solid var(--card-line); border-radius: 8px; cursor: pointer; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <div id="caption">Three studios, one room</div>
+  <div id="hud" data-craft="ignore">0.00 s</div>
+  <div id="ctl" data-craft="ignore"><button id="bPlay">play</button><button id="bPause">pause</button><button id="bBack">0</button><button id="bTone">tone</button></div>
+</div>
+<script src="vendor/three.iife.min.js"></script>
+<script>
+  const DURATION = 10;
+  const W = 1920, H = 1080;
+  const $ = (s) => document.querySelector(s);
+  const token = (name) => getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+  let renderer, scene, camera, cards = [], tone = 'full', playing = false, playT = 0, ready = false;
+
+  // A card's face is a canvas: the token colours and the page's font,
+  // drawn once, so the 3D object carries the same look as the 2D stage.
+  function faceTexture(label, sub, accent) {
+    const c = document.createElement('canvas'); c.width = 1024; c.height = 640;
+    const g = c.getContext('2d');
+    g.fillStyle = token('--card'); g.fillRect(0, 0, c.width, c.height);
+    g.strokeStyle = token('--card-line'); g.lineWidth = 6; g.strokeRect(3, 3, c.width - 6, c.height - 6);
+    g.fillStyle = accent; g.beginPath(); g.arc(90, 100, 26, 0, Math.PI * 2); g.fill();
+    g.fillStyle = token('--chalk'); g.font = '600 88px ' + token('--face'); g.fillText(label, 70, 250);
+    g.fillStyle = token('--muted'); g.font = '52px ' + token('--face'); g.fillText(sub, 70, 340);
+    const t = new THREE.CanvasTexture(c); t.colorSpace = THREE.SRGBColorSpace; return t;
+  }
+
+  function build(toneName) {
+    tone = toneName;
+    document.documentElement.dataset.tone = toneName;
+    if (renderer) { renderer.dispose(); renderer.domElement.remove(); }
+    renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.setPixelRatio(1);
+    renderer.setSize(W, H);
+    $('#stage').prepend(renderer.domElement);
+    scene = new THREE.Scene();
+    scene.background = new THREE.Color(token('--stage'));
+    camera = new THREE.PerspectiveCamera(40, W / H, 0.1, 100);
+
+    const floor = new THREE.Mesh(new THREE.PlaneGeometry(30, 30), new THREE.MeshStandardMaterial({ color: token('--stage'), roughness: 1 }));
+    floor.rotation.x = -Math.PI / 2; floor.position.y = -1.6; scene.add(floor);
+    const grid = new THREE.GridHelper(30, 30, token('--card-line'), token('--card-line')); grid.position.y = -1.59; scene.add(grid);
+
+    scene.add(new THREE.AmbientLight(token('--chalk'), 0.9));
+    const key = new THREE.DirectionalLight(token('--chalk'), 1.6); key.position.set(4, 6, 5); scene.add(key);
+
+    cards = [];
+    const specs = [['Plan', 'backlog, epics, stories', token('--accent')], ['Data', 'pipelines and models', token('--accent-2')], ['Quality Studio', 'tests and gates', token('--accent-3')]];
+    specs.forEach((s, i) => {
+      const geo = new THREE.BoxGeometry(3.2, 2, 0.12);
+      const side = new THREE.MeshStandardMaterial({ color: token('--card-line'), roughness: 0.8 });
+      const face = new THREE.MeshStandardMaterial({ map: faceTexture(s[0], s[1], s[2]), roughness: 0.6 });
+      const m = new THREE.Mesh(geo, [side, side, side, side, face, side]);
+      m.userData.home = new THREE.Vector3((i - 1) * 4.2, 0, (i === 1 ? 0.6 : -0.6));
+      cards.push(m); scene.add(m);
+    });
+    ready = true;
+    render(0);
+  }
+
+  const ease = (p) => p < 0.5 ? 2 * p * p : 1 - Math.pow(-2 * p + 2, 2) / 2;   // inOutQuad
+  const clamp01 = (v) => Math.max(0, Math.min(1, v));
+
+  // Everything is a function of t. No stored velocities, no deltas.
+  function render(t) {
+    const orbit = +token('--orbit'), lift = +token('--lift');
+    // 0 to 6 s: camera swings from the right round to the front; 6 to 10 s: holds
+    const swing = ease(clamp01(t / 6));
+    const ang = (0.9 - 0.9 * swing) * orbit;
+    camera.position.set(Math.sin(ang) * 13, 3.5 - 1.5 * swing, Math.cos(ang) * 13);
+    camera.lookAt(0, 0, 0);
+    cards.forEach((m, i) => {
+      m.position.copy(m.userData.home);
+      m.rotation.set(0, 0, 0);
+      if (i === 1) {
+        // 5 to 7.5 s: the middle card lifts and turns to face the camera
+        const p = ease(clamp01((t - 5) / 2.5));
+        m.position.y += 1.2 * p * lift;
+        m.position.z += 1.5 * p * lift;
+        m.rotation.x = -0.15 * p * lift;
+      } else {
+        // the others tip away a little, 6 to 8 s
+        const p = ease(clamp01((t - 6) / 2));
+        m.rotation.y = (i === 0 ? 0.35 : -0.35) * p * lift;
+      }
+    });
+    renderer.render(scene, camera);
+    $('#hud').textContent = t.toFixed(2) + ' s';
+  }
+
+  let raf = 0, t0 = 0, base = 0;
+  function play() {
+    if (playing) return; playing = true; base = playT; t0 = performance.now();
+    const loop = () => { if (!playing) return; playT = Math.min(DURATION, base + (performance.now() - t0) / 1000); render(playT); if (playT < DURATION) raf = requestAnimationFrame(loop); else playing = false; };
+    raf = requestAnimationFrame(loop);
+  }
+  function pause() { playing = false; cancelAnimationFrame(raf); }
+
+  window.__study = {
+    ready: () => ready,
+    duration: () => DURATION,
+    seekTo: (t) => { pause(); playT = Math.max(0, Math.min(t, DURATION)); render(playT); },
+    playTo: (t) => new Promise((resolve) => { play(); const w = () => { if (playT >= t || !playing) { pause(); resolve(playT); } else requestAnimationFrame(w); }; requestAnimationFrame(w); }),
+    tones: () => ['full', 'formal'],
+    setTone: (name) => { const keep = playT; build(name); render(keep); },
+  };
+  $('#bPlay').onclick = play; $('#bPause').onclick = pause;
+  $('#bBack').onclick = () => window.__study.seekTo(0);
+  $('#bTone').onclick = () => window.__study.setTone(tone === 'full' ? 'formal' : 'full');
+  document.fonts.ready.then(() => build('full'));
+</script>
+</body>
+</html>

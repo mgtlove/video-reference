@@ -1,0 +1,11 @@
+# Fireship audio, measured (I_KVMFrUtPk)
+
+Method: the video element routed through a Web Audio graph ending in a gain of 0 (silent by construction), played at 2x with pitch preserved, sampled every 0.1 s of media time: RMS loudness, spectral centroid, share of energy under 200 Hz. 2732 samples over 303 s.
+
+- Loudness: median RMS 0.086, 90th percentile 0.152, 99th 0.214; 10th percentile 0.0285. Dynamic range (99th over 10th) 17.5 dB. The histogram is one broad hump from 0.03 to 0.15 with a thin tail: the voice is compressed and level, no shouting, no whispering.
+- Pauses: none of 0.3 s or longer below an RMS of 0.045 anywhere in the five minutes; 3 at 0.045, 6 at 0.055, 18 at 0.065, none over 1 s. Inter-word gaps exist (about 29 s of samples under 0.02) but every one is shorter than 0.3 s. The breaths are cut. This is why 220 wpm sounds fast but not rushed: the words are at a normal rate, the gaps are gone.
+- Music bed: in the quietest gaps RMS falls to 0.0001, so there is no bed under the voice; music, if any, is in the ident and sponsor moments only. The floor of 0.0285 is the voice's own quiet syllables, not a bed.
+- Timbre: spectral centroid median 1559 Hz (10th to 90th percentile 1165 to 1883), low-band share median 0.24. A close, dry, mid-forward voice; the narrow centroid range says the delivery does not brighten or darken for jokes. Deadpan, measured.
+- Loudest cues: 1:25 "government, well, so is OpenAI", 1:06 "we'll look at how they went about", 1:23 "had the audacity to hack", 1:08 "find out what a 50-year-old", 1:33 "Cosby mode", 4:25 "head-to-head against Claude Code's auto", 4:23 "promising, but it's not perfect". The peaks sit on the promise (1:06 to 1:10) and on the verdict (4:23 to 4:27), not on the jokes. Emphasis is structural: the louder sentences are the ones that tell you where the video is going.
+- Quietest cues: the sign-off "one." (0.020) and "I will see you in the next" (0.049), then four explanatory clauses in the mechanism section (3:20, 3:24, 3:40, 2:48) at about 0.077. The explanation is spoken more softly than the news and the verdict.
+- What the measurement cannot say: pitch movement on a punchline (the centroid is a timbre proxy, not pitch), or whether a line is read with a smile. Those need an ear.

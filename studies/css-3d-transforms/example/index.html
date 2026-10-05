@@ -1,0 +1,139 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Study: CSS 3D transforms, held at an exact time</title>
+<!--
+  Study example for video-reference. No library. Opens from file://.
+  Two pieces of 3D that concept scenes ask for, done in CSS alone:
+    left   a card that flips to show its back (perspective, rotateY,
+           backface-visibility, transform-style: preserve-3d)
+    right  a stack of three screen layers that spreads apart and turns, the
+           "exploded view" of an interface (translateZ per layer, one
+           rotating parent)
+  Beats add classes; motion is CSS transitions and one keyframe animation;
+  the seek is the getAnimations technique from studies/web-animations-seek.
+  How far things tilt and spread is a token, so the formal tone is the same
+  scene with less depth.
+-->
+<style>
+  :root {
+    --stage: #23262b; --chalk: #f2efe9; --muted: #a7acb4;
+    --accent: #5fd1c4; --accent-2: #ffb454; --accent-3: #f26d7d;
+    --card: #2f333a; --card-line: #454a53;
+    --face: "Segoe UI", Arial, Helvetica, sans-serif;
+    --ease: cubic-bezier(.2,.7,.2,1); --dur: 1.2s;
+    --spread: 90px;       /* distance between exploded layers */
+    --tilt: 1;            /* 1 full turn of the stack, 0 none */
+    --flip: 180deg;
+  }
+  :root[data-tone="formal"] { --accent: #8fb3c9; --accent-2: #8fb3c9; --accent-3: #8fb3c9; --spread: 40px; --tilt: 0.4; --dur: 0.8s; --ease: ease-out; }
+  html, body { margin: 0; background: var(--stage); color: var(--chalk); font-family: var(--face); }
+  #stage { position: relative; width: 1920px; height: 1080px; overflow: hidden; }
+  h1 { position: absolute; left: 160px; top: 100px; margin: 0; font-size: 64px; font-weight: 600; }
+
+  /* the flip card */
+  #flipScene { position: absolute; left: 160px; top: 300px; width: 560px; height: 360px; perspective: 1600px; }
+  #flip { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transition: transform var(--dur) var(--ease); }
+  #flip.on { transform: rotateY(var(--flip)); }
+  #flip > div { position: absolute; inset: 0; backface-visibility: hidden; background: var(--card); border: 2px solid var(--card-line); border-radius: 18px; padding: 36px; box-sizing: border-box; }
+  #flip .back { transform: rotateY(180deg); border-color: var(--accent); }
+  #flip h3 { margin: 0 0 14px; font-size: 40px; font-weight: 600; }
+  #flip p { margin: 0; font-size: 28px; color: var(--muted); line-height: 1.35; }
+  #flip .dot { width: 26px; height: 26px; border-radius: 50%; background: var(--accent-2); margin-bottom: 24px; }
+
+  /* the exploded stack */
+  #stackScene { position: absolute; left: 1060px; top: 240px; width: 700px; height: 520px; perspective: 1800px; }
+  #stack { position: relative; width: 100%; height: 100%; transform-style: preserve-3d; transform: rotateX(calc(45deg * var(--tilt))) rotateZ(calc(-18deg * var(--tilt))); transition: transform var(--dur) var(--ease); }
+  #stack.turn { animation: turn 2.4s var(--ease) both; }
+  @keyframes turn { from { transform: rotateX(calc(45deg * var(--tilt))) rotateZ(calc(-18deg * var(--tilt))); } to { transform: rotateX(calc(55deg * var(--tilt))) rotateZ(calc(18deg * var(--tilt))); } }
+  .layer { position: absolute; left: 60px; top: 60px; width: 560px; height: 380px; border-radius: 14px; box-sizing: border-box; transition: transform var(--dur) var(--ease); border: 2px solid var(--card-line); }
+  .layer.base { background: var(--card); }
+  .layer.mid { background: transparent; border-color: var(--accent); }
+  .layer.mid::before { content: ""; position: absolute; left: 40px; top: 40px; width: 300px; height: 44px; background: var(--accent); opacity: .55; border-radius: 8px; }
+  .layer.top { background: transparent; border-color: var(--accent-2); }
+  .layer.top::before { content: ""; position: absolute; right: 40px; bottom: 40px; width: 160px; height: 56px; background: var(--accent-2); opacity: .7; border-radius: 10px; }
+  #stack.spread .mid { transform: translateZ(var(--spread)); }
+  #stack.spread .top { transform: translateZ(calc(var(--spread) * 2)); }
+  .lab { position: absolute; font-size: 30px; color: var(--muted); }
+  #labFlip { left: 160px; top: 700px; } #labStack { left: 1060px; top: 800px; }
+
+  #hud { position: absolute; left: 24px; bottom: 20px; font-size: 22px; color: var(--muted); font-variant-numeric: tabular-nums; }
+  #ctl { position: absolute; right: 24px; bottom: 16px; display: flex; gap: 8px; }
+  #ctl button { font: inherit; font-size: 20px; padding: 6px 14px; background: var(--card); color: var(--chalk); border: 1px solid var(--card-line); border-radius: 8px; cursor: pointer; }
+  .snap * { transition: none !important; }
+</style>
+</head>
+<body>
+<div id="stage">
+  <h1>Depth in CSS alone</h1>
+  <div id="flipScene"><div id="flip">
+    <div class="front"><div class="dot"></div><h3>Feature request</h3><p>Front of the card: what the learner sees first.</p></div>
+    <div class="back"><div class="dot"></div><h3>Generated epic</h3><p>Back of the card: what the studio produced from it.</p></div>
+  </div></div>
+  <div class="lab" id="labFlip">flip: perspective and backface-visibility</div>
+  <div id="stackScene"><div id="stack">
+    <div class="layer base"></div><div class="layer mid"></div><div class="layer top"></div>
+  </div></div>
+  <div class="lab" id="labStack">exploded view: translateZ per layer</div>
+  <div id="hud" data-craft="ignore">0.00 s</div>
+  <div id="ctl" data-craft="ignore"><button id="bPlay">play</button><button id="bPause">pause</button><button id="bBack">0</button><button id="bTone">tone</button></div>
+</div>
+<script>
+  const $ = (s) => document.querySelector(s);
+  const DURATION = 8;
+  let tone = 'full';
+  const BEATS = [
+    [0.8, () => $('#flip').classList.add('on')],
+    [2.6, () => $('#stack').classList.add('spread')],
+    [4.4, () => $('#stack').classList.add('turn')],
+    [6.4, () => $('#flip').classList.remove('on')],
+  ];
+  const LONGEST = 2.6;
+  function reset() { document.getAnimations().forEach((a) => a.cancel()); $('#flip').className = ''; $('#stack').className = ''; }
+  const reflow = () => document.body.offsetHeight;
+  function seekTo(t) {
+    pause(); playT = t;
+    document.body.classList.add('snap'); reset(); reflow();
+    for (const [bt, fn] of BEATS) if (bt <= t && t - bt >= LONGEST) fn();
+    reflow(); document.getAnimations().forEach((a) => a.finish());
+    document.body.classList.remove('snap'); reflow();
+    const seen = new Set(document.getAnimations()), tagged = [];
+    for (const [bt, fn] of BEATS) if (bt <= t && t - bt < LONGEST) { fn(); reflow(); for (const a of document.getAnimations()) if (!seen.has(a)) { seen.add(a); tagged.push([a, bt]); } }
+    for (const [a, bt] of tagged) { a.pause(); a.currentTime = (t - bt) * 1000; }
+    $('#hud').textContent = t.toFixed(2) + ' s';
+  }
+  let playing = false, raf = 0, t0 = 0, base = 0, playT = 0, fired = 0, live = [];
+  function play() {
+    if (playing) return;
+    if (playT === 0) { document.body.classList.add('snap'); reset(); reflow(); document.body.classList.remove('snap'); reflow(); fired = 0; live = []; }
+    playing = true; base = playT; t0 = performance.now();
+    const loop = () => { if (!playing) return; playT = Math.min(DURATION, base + (performance.now() - t0) / 1000);
+      while (fired < BEATS.length && BEATS[fired][0] <= playT) { const before = new Set(document.getAnimations()); BEATS[fired][1](); reflow(); for (const a of document.getAnimations()) if (!before.has(a)) live.push([a, BEATS[fired][0]]); fired++; }
+      $('#hud').textContent = playT.toFixed(2) + ' s'; if (playT < DURATION) raf = requestAnimationFrame(loop); else playing = false; };
+    raf = requestAnimationFrame(loop);
+  }
+  function pause() { playing = false; cancelAnimationFrame(raf); document.getAnimations().forEach((a) => a.pause()); }
+  window.__study = {
+    ready: () => true, duration: () => DURATION, seekTo,
+    playTo: (t) => new Promise((resolve) => { playT = 0; play(); const w = () => { if (playT >= t || !playing) { pause();
+        // the exact time reached is read off the animations themselves, not the clock:
+        // the clock was read at the top of a frame and the motion ran on to the pause
+        // a beat fires on a frame boundary, up to one frame after its time, so the
+        // motion it started runs that much behind the clock; the animations' own
+        // time is the truth, and it is what a seek to the same moment reproduces
+        let reached = -1; for (const [a, bt] of live) if (a.currentTime !== null && a.currentTime < a.effect.getComputedTiming().endTime) reached = Math.max(reached, bt + a.currentTime / 1000);
+        if (reached < 0) reached = playT;
+        $('#hud').textContent = reached.toFixed(2) + ' s';
+        // transform transitions run on the compositor thread, which can be a frame ahead of
+        // the main thread; two frames after the pause the picture shows the paused time exactly
+        requestAnimationFrame(() => requestAnimationFrame(() => resolve(reached))); } else requestAnimationFrame(w); }; requestAnimationFrame(w); }),
+    tones: () => ['full', 'formal'],
+    setTone: (name) => { tone = name; document.documentElement.dataset.tone = name; seekTo(playT); },
+  };
+  $('#bPlay').onclick = () => { playT = 0; play(); }; $('#bPause').onclick = pause;
+  $('#bBack').onclick = () => seekTo(0); $('#bTone').onclick = () => window.__study.setTone(tone === 'full' ? 'formal' : 'full');
+  seekTo(0);
+</script>
+</body>
+</html>

@@ -1,0 +1,464 @@
+{
+  "_about": "Look pack drafts, one per studied style (styles/<note>.md). A look is tokens and motion defaults a video repo starts from; it never copies a creator's material. Keys are the same for every look so an agent can diff two and so the kit can read one into theme.css and look.json (roadmap VP-6). Sizes are pixels on a 1920x1080 stage; times in milliseconds unless the key says seconds; every value must clear craft/rules.json (text floors 72/72/54 px, 42 characters, accent share 0.10, still run 8 s full and 12 s formal). 'after' credits the style studied; 'pacing' is the creator's measured rate and our target, so the gap is visible. Drafted 30 Sep 2026; nothing here is built in the kit yet.",
+  "keys": {
+    "ground": "stage background",
+    "ink": "text and stroke colour on that ground",
+    "paper": "the surface of a card, clipping or slide when it differs from the ground",
+    "accents": "at most three, in priority order; the checker sums their share",
+    "type": "family class, weight, case and the sizes used for title, label and body",
+    "strokes": "width in px, seeded roughness 0 to 1, glow in px, cap style",
+    "entrance": "how an element arrives: kind, duration ms, easing, distance px or scale from",
+    "camera": "static, push, or drift; percent of frame height per second; scale change over a hold",
+    "cutSeconds": "seconds between shots, full and formal",
+    "holdSeconds": "longest still without a build or a moving camera, full and formal",
+    "textOnFrame": "what kinds of text appear: none, labels, bullets, titles, code, captions",
+    "evidence": "what shows a fact: recreated screens, documents, icons, figures",
+    "sceneKinds": "the rig's scene kinds this look serves best",
+    "pacing": "words per minute: creator measured, our target; sentence average words",
+    "voice": "the register the narration takes in this look, in a phrase"
+  },
+  "looks": {
+    "lightboard": {
+      "after": "styles/ibm-technology-lightboard.md",
+      "ground": "#0b0b0d",
+      "ink": "#f2f2f2",
+      "paper": null,
+      "accents": [
+        "#b892ff",
+        "#6fe3ff",
+        "#ff7ad9"
+      ],
+      "type": {
+        "family": "rounded hand-style sans",
+        "weight": 500,
+        "case": "sentence",
+        "title": 88,
+        "label": 64,
+        "body": 54
+      },
+      "strokes": {
+        "width": 6,
+        "roughness": 0.6,
+        "glow": 6,
+        "cap": "round"
+      },
+      "entrance": {
+        "kind": "draw-on",
+        "ms": 1100,
+        "easing": "ease-out",
+        "distance": 0,
+        "scaleFrom": 1
+      },
+      "camera": {
+        "kind": "push",
+        "percentPerSecond": 0,
+        "scaleOverHold": 0.05
+      },
+      "cutSeconds": {
+        "full": 12,
+        "formal": 16
+      },
+      "holdSeconds": {
+        "full": 8,
+        "formal": 12
+      },
+      "textOnFrame": [
+        "labels",
+        "titles"
+      ],
+      "evidence": [
+        "recreated screens sketched in outline",
+        "icons"
+      ],
+      "sceneKinds": [
+        "concept opener",
+        "diagram",
+        "cards and rooms"
+      ],
+      "pacing": {
+        "creatorWpm": 125,
+        "targetWpm": 150,
+        "sentenceWords": 14
+      },
+      "voice": "a colleague at the board, plain declaratives, one thesis line repeated"
+    },
+    "code-report": {
+      "after": "styles/fireship-code-report.md",
+      "ground": "#0d0d0d",
+      "ink": "#f4f4f4",
+      "paper": "#161616",
+      "accents": [
+        "#ff3b3b",
+        "#37e07a",
+        "#ffb020"
+      ],
+      "type": {
+        "family": "geometric sans, monospace for code",
+        "weight": 700,
+        "case": "caps for labels",
+        "title": 96,
+        "label": 64,
+        "body": 54
+      },
+      "strokes": {
+        "width": 8,
+        "roughness": 0,
+        "glow": 0,
+        "cap": "square"
+      },
+      "entrance": {
+        "kind": "scale-in",
+        "ms": 220,
+        "easing": "ease-out",
+        "distance": 0,
+        "scaleFrom": 0.92
+      },
+      "camera": {
+        "kind": "static",
+        "percentPerSecond": 0,
+        "scaleOverHold": 0
+      },
+      "cutSeconds": {
+        "full": 3.5,
+        "formal": 6
+      },
+      "holdSeconds": {
+        "full": 4,
+        "formal": 8
+      },
+      "textOnFrame": [
+        "labels",
+        "code",
+        "titles"
+      ],
+      "evidence": [
+        "screenshots with ids, rotated 2 degrees with a shadow",
+        "figures",
+        "a levels diagram of bands"
+      ],
+      "sceneKinds": [
+        "concept opener",
+        "real chrome",
+        "diagram"
+      ],
+      "pacing": {
+        "creatorWpm": 220,
+        "targetWpm": 165,
+        "sentenceWords": 16
+      },
+      "voice": "first person, present tense, dry, a verdict with numbers"
+    },
+    "studio-walkthrough": {
+      "after": "styles/aws-developers-studio-walkthrough.md",
+      "ground": "#14161c",
+      "ink": "#ffffff",
+      "paper": "#1c1f27",
+      "accents": [
+        "#2f6fed",
+        "#7c4dff"
+      ],
+      "type": {
+        "family": "humanist sans",
+        "weight": 500,
+        "case": "sentence",
+        "title": 72,
+        "label": 64,
+        "body": 54
+      },
+      "strokes": {
+        "width": 4,
+        "roughness": 0,
+        "glow": 0,
+        "cap": "round"
+      },
+      "entrance": {
+        "kind": "fade-rise",
+        "ms": 260,
+        "easing": "ease-out",
+        "distance": 12,
+        "scaleFrom": 1
+      },
+      "camera": {
+        "kind": "push",
+        "percentPerSecond": 0,
+        "scaleOverHold": 0.08
+      },
+      "cutSeconds": {
+        "full": 20,
+        "formal": 30
+      },
+      "holdSeconds": {
+        "full": 8,
+        "formal": 12
+      },
+      "textOnFrame": [
+        "titles",
+        "a checklist",
+        "labels",
+        "captions"
+      ],
+      "evidence": [
+        "recreated screens at native pixel size inside a rounded frame"
+      ],
+      "sceneKinds": [
+        "walkthrough",
+        "real chrome"
+      ],
+      "pacing": {
+        "creatorWpm": 164,
+        "targetWpm": 160,
+        "sentenceWords": 16
+      },
+      "voice": "announce, do, explain; the why after the how"
+    },
+    "clippings": {
+      "after": "styles/how-money-works-clippings.md",
+      "ground": "#101512",
+      "ink": "#1a1a1a",
+      "paper": "#f3f1ea",
+      "accents": [
+        "#35c46a",
+        "#ffe14d"
+      ],
+      "type": {
+        "family": "serif for headlines, sans for ids",
+        "weight": 600,
+        "case": "sentence",
+        "title": 80,
+        "label": 54,
+        "body": 54
+      },
+      "strokes": {
+        "width": 28,
+        "roughness": 0.3,
+        "glow": 0,
+        "cap": "square"
+      },
+      "entrance": {
+        "kind": "fade-drift",
+        "ms": 300,
+        "easing": "ease-in-out",
+        "distance": 0,
+        "scaleFrom": 1
+      },
+      "camera": {
+        "kind": "drift",
+        "percentPerSecond": 1.5,
+        "scaleOverHold": 0.06
+      },
+      "cutSeconds": {
+        "full": 5,
+        "formal": 8
+      },
+      "holdSeconds": {
+        "full": 8,
+        "formal": 12
+      },
+      "textOnFrame": [
+        "titles",
+        "labels"
+      ],
+      "evidence": [
+        "documents as paper clippings with a source id",
+        "a highlighter along the line being read"
+      ],
+      "sceneKinds": [
+        "concept opener",
+        "diagram"
+      ],
+      "pacing": {
+        "creatorWpm": 198,
+        "targetWpm": 160,
+        "sentenceWords": 18
+      },
+      "voice": "sceptical reporter, sources named, each section opened with a question"
+    },
+    "doodle": {
+      "after": "styles/casually-explained-doodle.md",
+      "ground": "#ffffff",
+      "ink": "#111111",
+      "paper": null,
+      "accents": [
+        "#d9342b"
+      ],
+      "type": {
+        "family": "hand-style sans",
+        "weight": 500,
+        "case": "caps for labels",
+        "title": 80,
+        "label": 60,
+        "body": 54
+      },
+      "strokes": {
+        "width": 4,
+        "roughness": 1.0,
+        "glow": 0,
+        "cap": "round"
+      },
+      "entrance": {
+        "kind": "pop",
+        "ms": 180,
+        "easing": "ease-out",
+        "distance": 16,
+        "scaleFrom": 0.9
+      },
+      "camera": {
+        "kind": "static",
+        "percentPerSecond": 0,
+        "scaleOverHold": 0
+      },
+      "cutSeconds": {
+        "full": 6,
+        "formal": 9
+      },
+      "holdSeconds": {
+        "full": 6,
+        "formal": 9
+      },
+      "textOnFrame": [
+        "labels"
+      ],
+      "evidence": [
+        "recreated screens inside a drawn outline",
+        "stick figures from a small vocabulary"
+      ],
+      "sceneKinds": [
+        "concept opener",
+        "cards and rooms"
+      ],
+      "pacing": {
+        "creatorWpm": 216,
+        "targetWpm": 150,
+        "sentenceWords": 16
+      },
+      "voice": "flat first person, the point in the last clause, cut on the last word"
+    },
+    "lecture-slides": {
+      "after": "styles/stephane-maarek-lecture-slides.md",
+      "ground": "#f3f4f6",
+      "ink": "#1f2328",
+      "paper": "#ffffff",
+      "accents": [
+        "#b04a00",
+        "#1f6feb",
+        "#ff9900"
+      ],
+      "type": {
+        "family": "light humanist sans",
+        "weight": 400,
+        "case": "sentence",
+        "title": 72,
+        "label": 54,
+        "body": 54
+      },
+      "strokes": {
+        "width": 3,
+        "roughness": 0,
+        "glow": 0,
+        "cap": "butt"
+      },
+      "entrance": {
+        "kind": "fade",
+        "ms": 200,
+        "easing": "ease-out",
+        "distance": 0,
+        "scaleFrom": 1
+      },
+      "camera": {
+        "kind": "push",
+        "percentPerSecond": 0,
+        "scaleOverHold": 0.05
+      },
+      "cutSeconds": {
+        "full": 45,
+        "formal": 60
+      },
+      "holdSeconds": {
+        "full": 8,
+        "formal": 12
+      },
+      "textOnFrame": [
+        "titles",
+        "bullets",
+        "labels"
+      ],
+      "evidence": [
+        "icons",
+        "recreated screens",
+        "labelled arrows"
+      ],
+      "sceneKinds": [
+        "diagram",
+        "walkthrough"
+      ],
+      "pacing": {
+        "creatorWpm": 203,
+        "targetWpm": 150,
+        "sentenceWords": 15
+      },
+      "voice": "a teacher, each term defined as it is named, what matters said outright",
+      "_note": "the product orange #ff9900 is 1.95:1 on the light ground (measured 30 Sep 2026), so it is the third accent, for icons and strokes only; text in orange uses #b04a00 (4.99:1)"
+    },
+    "archive-camera": {
+      "after": "styles/ken-burns-pbs-archive-camera.md",
+      "ground": "#0e0c0a",
+      "ink": "#1c1a17",
+      "paper": "#efe6d6",
+      "accents": [
+        "#a63d2f",
+        "#35577a"
+      ],
+      "type": {
+        "family": "transitional serif, small caps for attribution",
+        "weight": 400,
+        "case": "sentence",
+        "title": 72,
+        "label": 54,
+        "body": 54
+      },
+      "strokes": {
+        "width": 3,
+        "roughness": 0.2,
+        "glow": 0,
+        "cap": "round"
+      },
+      "entrance": {
+        "kind": "cross-fade",
+        "ms": 600,
+        "easing": "ease-in-out",
+        "distance": 0,
+        "scaleFrom": 1
+      },
+      "camera": {
+        "kind": "drift",
+        "percentPerSecond": 3,
+        "scaleOverHold": 0.07
+      },
+      "cutSeconds": {
+        "full": 8,
+        "formal": 12
+      },
+      "holdSeconds": {
+        "full": 8,
+        "formal": 12
+      },
+      "textOnFrame": [
+        "titles",
+        "attribution after a quote"
+      ],
+      "evidence": [
+        "documents and recreated screens full bleed under the camera"
+      ],
+      "sceneKinds": [
+        "concept opener",
+        "transition"
+      ],
+      "pacing": {
+        "creatorWpm": 123,
+        "targetWpm": 140,
+        "sentenceWords": 17
+      },
+      "voice": "measured narrator, past tense, quotation then attribution, silence as punctuation"
+    }
+  }
+}
